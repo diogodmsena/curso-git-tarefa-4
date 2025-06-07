@@ -1,0 +1,51 @@
+name: Build and Deploy to GitHub Pages
+
+# Gatilho: executa o pipeline em pushes para a branch 'main'
+on:
+  push:
+    branches: [ "main" ]
+
+# Permissões necessárias para que o pipeline possa publicar a página
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # Primeiro Job: Verificar se o arquivo existe
+  test:
+    name: 1. Testar existência do index.html
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Verificar se o arquivo public/index.html existe
+        run: |
+          if [ -f "public/index.html" ]; then
+            echo "Arquivo encontrado. Teste passou!"
+          else
+            echo "ERRO: Arquivo public/index.html não encontrado."
+            exit 1 # Faz o pipeline falhar
+          fi
+
+  # Segundo Job: Publicar no GitHub Pages
+  deploy:
+    name: 2. Publicar no GitHub Pages
+    needs: test # Só executa se o job 'test' for bem-sucedido
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Fazer upload do artefato (conteúdo do site)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Define que o conteúdo a ser publicado está na pasta 'public'
+          path: './public'
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
